@@ -1,4 +1,4 @@
-# 🧬 Integrative-Genomic-Variant-Analysis-and-Consequence-Prediction
+# 🧬 Integrative Genomic Variant Analysis and Consequence Prediction
 
 This project presents a comprehensive machine learning pipeline for analyzing genetic mutations using the **ClinVar Conflicting Dataset**. By leveraging advanced data preprocessing, feature engineering, multiple ML models, and explainable AI techniques, this study aims to improve the prediction and interpretation of pathogenic genetic variants.
 
