@@ -1,90 +1,97 @@
-# 🧬 Integrative Genomic Variant Analysis and Consequence Prediction
+# Integrative Genomic Variant Analysis and Consequence Prediction
 
-This project presents a comprehensive machine learning pipeline for analyzing genetic mutations using the **ClinVar Conflicting Dataset**. By leveraging advanced data preprocessing, feature engineering, multiple ML models, and explainable AI techniques, this study aims to improve the prediction and interpretation of pathogenic genetic variants.
-
----
-
-## 📂 Dataset
-- **Source:** [Genetic Variant Classifications](https://www.kaggle.com/datasets/kevinarvai/clinvar-conflicting)
-- **Samples:** 65,188 genetic variants
-- **Features:** 46 initial features including allele frequencies, mutation consequences, protein impact scores (SIFT, PolyPhen), and conservation scores (CADD, BLOSUM62).
-- Focus on **missense mutations**, pathogenicity classification, and functional impact prediction.
+This project explores the ClinVar Conflicting dataset with data cleaning, feature selection, several machine learning models and SHAP explanations. All code is in [`Clinvar_Mutations.ipynb`](Clinvar_Mutations.ipynb).
 
 ---
 
-## 🎯 Research Objectives
-- Predict **pathogenicity (CLASS)** of genetic mutations.
-- Model the **PolyPhen** score for missense mutations.
-- Analyze the impact of genetic variants on protein function (**Consequence** prediction).
-- Apply **SHAP** for model interpretability to identify key biological features driving predictions.
+## Dataset
+
+* **Source:** [ClinVar Conflicting](https://www.kaggle.com/datasets/kevinarvai/clinvar-conflicting) (Kaggle, Kevin Arvai), built from ClinVar with VEP annotations. A zipped copy is included as `clinvar_conflicting.csv.zip`.
+* **Size:** 65,188 variants, 46 columns
+* **What `CLASS` means:** `CLASS = 1` if different laboratories gave the variant **conflicting clinical classifications**, and `0` if they agreed. It is **not** a pathogenic vs benign label. About 25% of variants are conflicting.
 
 ---
 
-## ⚙️ Methodology
+## Tasks
 
-### 1. **Data Cleaning & Preprocessing**
-- Removed features with >99% missing values.
-- Handled hidden null values (e.g., allele frequencies with `0` as missing indicator).
-- Applied:
-  - **Interpolation** for missing data.
-  - **Box-Cox Transformation** for skewness reduction.
-  - **Winsorization** for outlier mitigation.
-
-### 2. **Exploratory Data Analysis (EDA)**
-- Generated:
-  - Correlation heatmaps to detect multicollinearity.
-  - Histograms & boxplots for distribution analysis.
-  - Scatter plots for key feature relationships (e.g., AF_ESP vs AF_EXAC).
-
-### 3. **Feature Engineering**
-- Created composite features like `AF_avg`.
-- Applied **PCA** for dimensionality insights.
-
-### 4. **Modeling Approaches**
-- **Classification Tasks**:
-  - Logistic Regression
-  - Lasso Regression (for feature importance)
-  - **XGBoost Classifier** (best performance for `PolyPhen` with ~78.5% accuracy)
-- **Regression Tasks**:
-  - Lasso Regression
-  - **XGBoost Regressor** (achieved R² ≈ 0.945 for `Consequence` prediction)
-
-### 5. **Model Interpretability**
-- Utilized **SHAP (SHapley Additive exPlanations)** to:
-  - Visualize feature contributions.
-  - Enhance biological understanding of mutation impacts.
+1. Predict whether a variant has conflicting classifications (`CLASS`)
+2. For missense variants, predict the PolyPhen category (benign, possibly damaging, probably damaging, unknown)
+3. Explain the PolyPhen model with SHAP
 
 ---
 
-## 📈 Key Results
+## Method (as implemented in the notebook)
 
-| **Target Variable** | **Best Model** | **Accuracy / R²** |
-|---------------------|----------------|-------------------|
-| `CLASS`             | XGBoost        | ~77% Accuracy     |
-| `PolyPhen`          | XGBoost        | ~78.5% Accuracy   |
-| `Consequence`       | XGBoost        | 0.945 R²          |
+### Cleaning
+* Dropped columns with more than 99% missing values and several identifier or free-text columns
+* Filled remaining gaps (forward fill for categorical and BLOSUM62)
+* Allele frequencies of `0` treated as missing, then filled by interpolation after comparing mean, median and interpolation by skewness and kurtosis
+* Box-Cox transformation applied to allele frequencies; winsorisation was also tested for comparison
+* Categorical columns label-encoded
 
-- Strong predictive performance, especially with XGBoost models.
-- SHAP analysis highlighted critical features like:
-  - **Allele Frequencies (AF_ESP, AF_EXAC, AF_TGP)**
-  - **SIFT & PolyPhen scores**
-  - **CADD_PHRED**, **LoFtool**, and **Codons**
+### Exploration and feature engineering
+* Correlation heatmaps, histograms, boxplots and scatter plots of allele frequencies
+* `AF_avg` (mean of AF_ESP, AF_EXAC and AF_TGP) and one PCA component of the allele frequencies (87% of their variance)
+* Feature selection with chi-squared `SelectKBest`, RFE and Lasso
+
+### Models
+* `CLASS`: Logistic Regression, Random Forest, XGBoost (80/20 split)
+* `PolyPhen` (32,408 missense variants): Logistic Regression and XGBoost
+* SHAP `TreeExplainer` on the PolyPhen XGBoost model
 
 ---
 
-## 🖼️ Visualizations
-The project includes:
-- Correlation heatmaps for feature analysis.
-  ![5](https://github.com/user-attachments/assets/d594e274-0879-4918-a22a-1354cb5dbc84)
+## Results
 
-- Distribution plots pre- and post-transformation. (Please refer to the notebook for full visual outputs.)
-- SHAP summary plots & force plots for individual prediction explanations.
+| Task | Model | Accuracy |
+| --- | --- | --- |
+| `CLASS` (conflicting or not) | Majority class baseline | 74.9% |
+| `CLASS` | Logistic Regression | 74.9% (predicts only class 0) |
+| `CLASS` | Random Forest | 76.3% |
+| `CLASS` | XGBoost | 76.6% |
+| `PolyPhen` (missense) | Logistic Regression | 74.0% |
+| `PolyPhen` (missense) | XGBoost | 78.7% |
 
+* For `CLASS`, the best model is only about 2 points above simply predicting "not conflicting" every time. Predicting conflicting classifications from these features is hard.
+* For `PolyPhen`, XGBoost separates benign and probably damaging variants well but struggles with possibly damaging ones.
+
+---
+
+## Visualisations
+
+Correlation heatmap:
+![5](https://github.com/user-attachments/assets/d594e274-0879-4918-a22a-1354cb5dbc84)
+
+SHAP plots for the PolyPhen model:
 ![9](https://github.com/user-attachments/assets/ded383cc-7353-41dc-b57d-b6d5eee564c3)
 ![10](https://github.com/user-attachments/assets/fc371415-132f-4d6d-a676-cefc7b712dd9)
 ![11](https://github.com/user-attachments/assets/8efe6005-a5ef-4b4f-ad24-25319b7f6d7a)
-- Confusion matrices for classification evaluations.
+
+Confusion matrix for the PolyPhen model:
 ![12](https://github.com/user-attachments/assets/61821c7a-f3ca-4821-9186-19418aa3812b)
 
-*(Due to GitHub limitations, please refer to the notebook for full visual outputs.)*
+See the notebook for all plots.
 
+---
+
+## Limitations
+
+* **Consequence regression is not valid.** The notebook also fits an XGBoost regressor to `Consequence` (R² 0.946). `Consequence` is a categorical label encoded as integers, so regression on it is not meaningful. The features also include `IMPACT`, which VEP derives directly from `Consequence`, so the target leaks into the inputs. This result is excluded from the table above.
+* **Confusion matrix labels.** The label encoder orders PolyPhen classes alphabetically (benign, possibly damaging, probably damaging, unknown), but the plot labels the second and third classes the other way round.
+* **Imbalance.** No class weighting or resampling was used for `CLASS`, so accuracy is close to the majority baseline. Balanced accuracy, F1 for the minority class and ROC-AUC would be more informative.
+* **Single split.** All results come from one 80/20 split without cross-validation.
+
+---
+
+## Next Steps
+
+* Report balanced accuracy, minority-class F1 and ROC-AUC for `CLASS`, with class weights
+* Treat `Consequence` as a classification task and remove `IMPACT` from its features
+* Fix the PolyPhen confusion matrix labels
+* Use cross-validation and keep variants from the same gene out of both train and test sets
+
+---
+
+## Tools
+
+Python, pandas, NumPy, SciPy, scikit-learn, XGBoost, SHAP, Matplotlib, Seaborn
